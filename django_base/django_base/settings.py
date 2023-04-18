@@ -56,7 +56,7 @@ THIRD_APPS = [
 ]
 
 MY_APPS = [
-    'courses',
+    'users',
 ]
 
 INSTALLED_APPS = BASE_APPS + THIRD_APPS + MY_APPS
@@ -175,9 +175,14 @@ AUTHENTICATION_BACKENDS = (
     'allauth.account.auth_backends.AuthenticationBackend',
 )
 
+REST_AUTH_SERIALIZERS = {
+    'USER_DETAILS_SERIALIZER': 'users.serializers.UserSerializer',
+}
+
 #<-------------------------- Auth Configurations -------------------------->
 
 #<-------------------------- Email configurations ------------------------->
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 #<-------------------------- Email configurations -------------------------->
 
+AUTH_USER_MODEL = 'users.User'

@@ -1,9 +1,4 @@
 from django.shortcuts import render
-from django.dispatch import receiver
-from django.db.models.signals import post_save
-from django.contrib.auth.models import User
-
-from allauth.account.models import EmailAddress
 
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -11,6 +6,9 @@ from rest_framework import status
 
 from allauth.account.views import ConfirmEmailView
 from dj_rest_auth.registration.serializers import VerifyEmailSerializer
+from dj_rest_auth.registration.views import RegisterView
+
+#from users.models import 
 
 class HelloWorldView(APIView):
     def get(self, request):
@@ -34,7 +32,23 @@ class EmailVerification(APIView, ConfirmEmailView):
         confirmation.confirm(self.request)
         return Response({'detail': 'ok'}, status=status.HTTP_200_OK)
     
-@receiver(post_save, sender=User)
-def create_profile(sender, instance, **kwargs):
-    if kwargs['created'] and instance.is_superuser:
-        EmailAddress.objects.create(user=instance, email=instance.email, verified=True, primary=True)
+class CustomRegisterView(RegisterView):
+    def create(self, request, *args, **kwargs):
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        data = self.get_response_data(user)
+        
+        user.first_name = request.data.get('first_name', '')
+        user.last_name = request.data.get('last_name', '')
+        user.user_type = request.data.get('user_type', 'buyer')
+        user.save()
+        
+        if data:
+            response = Response(status=status.HTTP_201_CREATED, headers=headers)
+        
+        else:
+            response = Response(status=status.HTTP_204_NO_CONTENT, headers=headers)
+
+        return response
