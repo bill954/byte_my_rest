@@ -5,10 +5,11 @@ from rest_framework.views import APIView
 from rest_framework import status
 
 from allauth.account.views import ConfirmEmailView
+
 from dj_rest_auth.registration.serializers import VerifyEmailSerializer
 from dj_rest_auth.registration.views import RegisterView
 
-#from users.models import 
+from users.models import UserDocumentation
 
 class HelloWorldView(APIView):
     def get(self, request):
@@ -44,6 +45,9 @@ class CustomRegisterView(RegisterView):
         user.last_name = request.data.get('last_name', '')
         user.user_type = request.data.get('user_type', 'buyer')
         user.save()
+        
+        if user.user_type == 'seller':
+            UserDocumentation.objects.create(user=user)
         
         if data:
             response = Response(status=status.HTTP_201_CREATED, headers=headers)
