@@ -15,7 +15,7 @@ class User(AbstractUser):
     user_type = models.CharField(max_length=6, choices=USER_TYPE_CHOICES, default='buyer')
     
 class UserProfile(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name = 'profile')
     birth_date = models.DateField(null=True, blank=True)
     profile_image = models.ImageField(upload_to='profile_image', blank=True)
 
