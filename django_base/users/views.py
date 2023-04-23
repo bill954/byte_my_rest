@@ -3,8 +3,14 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework import status
 
+from django.core.mail import EmailMessage
+from django.template.loader import render_to_string
+from django.conf import settings
+
 from users.serializers import UserDocumentationUpdateSerializer, UserDocumentationSerializer, UserDocumentationListSerializer
 from users.models import UserDocumentation
+
+
 
 class UserDocumentationView(APIView):
 
@@ -44,6 +50,14 @@ class UserDocumentationAdminView(APIView):
     
     permission_classes = (IsAdminUser,)
     
+    def send_mail(self, user, status, rejected_reason=None):
+        html_template = 'documentation/user_documentation.html'
+        subject = 'Ecommerce - Documentación aprobada' if status else 'Ecommerce - Documentación rechazada'
+        html_message = render_to_string(html_template, {'name': user.first_name, 'refected_reason': rejected_reason, 'status': status, 'BASE_URL': 'localhost:8000'})
+        message = EmailMessage(subject, html_message, None, [user.email,])
+        message.content_subtype = 'html'
+        message.send()
+    
     def get(self, request):
         user_documents = UserDocumentation.objects.filter(status='uploaded')
         serializer = UserDocumentationListSerializer(user_documents, many=True)
@@ -73,4 +87,7 @@ class UserDocumentationAdminView(APIView):
         
         document.status = document_status
         document.save()
+        
+        self.send_mail(document.user, document_status == 'approved', document.rejection_reason)
+        
         return Response('Document status updated', status=status.HTTP_200_OK)
