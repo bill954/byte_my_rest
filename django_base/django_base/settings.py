@@ -57,6 +57,8 @@ THIRD_APPS = [
 
 MY_APPS = [
     'users',
+    'admin_settings',
+    'products',
 ]
 
 INSTALLED_APPS = BASE_APPS + THIRD_APPS + MY_APPS
