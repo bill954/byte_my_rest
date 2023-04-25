@@ -6,7 +6,8 @@ from rest_framework import status
 from django.core.mail import EmailMessage
 from django.template.loader import render_to_string
 from django.conf import settings
-from django.db.models import Q
+from django.db.models import Q, Count, Value, CharField
+from django.db.models.functions import Concat
 from django.core.paginator import Paginator
 
 from users.serializers import UserDocumentationUpdateSerializer, UserDocumentationSerializer, UserDocumentationListSerializer, UserSerializer, UserListSerializer
@@ -111,10 +112,18 @@ class UserListView(APIView):
             users = users.filter(user_type = user_type)
 
         if 'search' in  request.query_params:
-            users = users.filter(
-                Q(first_name__icontains = request.query_params['search']) |
-                Q(last_name__icontains = request.query_params['search']) |
-                Q(email__icontains = request.query_params['search']))
+            # users = users.filter(
+            #     Q(first_name__icontains = request.query_params['search']) |
+            #     Q(last_name__icontains = request.query_params['search']) |
+            #     Q(email__icontains = request.query_params['search']))
+            # Another way to user search:
+            users = (users.annotate(full_search_field = Concat('first_name', 
+                                                            Value(' '),'last_name', 
+                                                            Value(' '),'email',
+                                                            Value(' '),'last_name', 
+                                                            Value(' '),'first_name', 
+                                                            output_field = CharField()))
+                .filter(full_search_field__icontains = request.query_params['search']))
             
         if 'order_by' in request.query_params:
             order_by = request.query_params['order_by']
