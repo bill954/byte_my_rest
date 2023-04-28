@@ -13,7 +13,6 @@ class MeasureUnitListCreateApiView(ListCreateAPIView):
     serializer_class = MeasureUnitSerializer
     permission_classes = [IsAdminOrReadOnly]
 
-
 class MeasureUnitRetrieveUpdateDestroyAPIView(RetrieveUpdateDestroyAPIView):
     queryset = MeasureUnit.objects.all()
     serializer_class = MeasureUnitSerializer

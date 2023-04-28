@@ -4,7 +4,7 @@ from users.models import User
 
 class Product(models.Model):
     
-    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='products', null=True, blank=True)
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name='products')
     
     name = models.CharField(max_length=100)
     SKU = models.CharField(max_length=20)
