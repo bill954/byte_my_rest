@@ -1,6 +1,6 @@
 from rest_framework.permissions import BasePermission, SAFE_METHODS
 
-class IsSeller(BasePermission):
+class IsSellerOrReadOnly(BasePermission):
     """
     The request is authenticated as a admin, or is a read-only request.
     """

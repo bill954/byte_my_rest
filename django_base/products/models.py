@@ -18,6 +18,11 @@ class Product(models.Model):
     category = models.ForeignKey(Category, on_delete=models.SET_NULL, related_name='products', null=True, blank=True)
     subcategory = models.ForeignKey(SubCategory, on_delete=models.SET_NULL, related_name='products', null=True, blank=True)
     
+    # The right thing would be not to add null and blank True, but I did it like this and prefer not to change de db now.
+    creation_time = models.DateTimeField(auto_now_add=True, null=True, blank=True)
+    
+    is_banned = models.BooleanField(default = False)
+    
     def __str__(self):
         return self.owner.get_full_name() + '-' + self.name
     
