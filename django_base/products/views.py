@@ -1,8 +1,11 @@
 from rest_framework.generics import ListAPIView, ListCreateAPIView, RetrieveUpdateDestroyAPIView
+from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from django.core.paginator import Paginator
 
+from django.core.paginator import Paginator
+from django.shortcuts import get_object_or_404
+from rest_framework.permissions import IsAdminUser
 
 from django.db.models import Q, Count, Value, CharField
 from django.db.models.functions import Concat
@@ -77,3 +80,19 @@ class ProductListAPIView(ListAPIView):
             products = products.order_by(order_by)
         
         return products
+    
+class BanProductsAdminView(APIView):
+    permission_classes = [IsAdminUser]
+    
+    def patch(self, request, pk):
+        if not 'is_banned' in request.data:
+            return Response({'error': 'is_banned field is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if request.data['is_banned'].lower() not in ['true', 'false']:
+            return Response({'error': 'is_banned must be True or False'})
+        
+        product = get_object_or_404(Product, pk=pk)
+        product.is_banned = request.data['is_banned']
+        product.save()
+        
+        return Response({'data': 'The banned state is: ' + request.data['is_banned']}, status=status.HTTP_200_OK)

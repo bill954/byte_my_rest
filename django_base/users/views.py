@@ -9,6 +9,7 @@ from django.conf import settings
 from django.db.models import Q, Count, Value, CharField
 from django.db.models.functions import Concat
 from django.core.paginator import Paginator
+from django.shortcuts import get_object_or_404
 
 from users.serializers import UserDocumentationUpdateSerializer, UserDocumentationSerializer, UserDocumentationListSerializer, UserSerializer, UserListSerializer
 from users.models import UserDocumentation, User
@@ -174,3 +175,22 @@ class SellersListView(APIView):
         serializer = UserListSerializer(data, many=True)
         
         return Response(serializer.data, status=status.HTTP_200_OK)
+    
+class DistinguishUserAdminView(APIView):
+    
+    def patch(self,request, pk):
+        user = get_object_or_404(User, pk=pk)
+        if not user.user_type == 'seller':
+            return Response({'error': 'User is not a seller'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if not 'is_distinguished' in request.data:
+            return Response({'error': 'is_distinguished field required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        if request.data['is_distinguished'].lower() not in ['true', 'false']:
+            return Response({'error': 'is_distinguished must be True or False'})
+        
+        user.profile.is_distinguished = False if request.data['is_distinguished'].lower() == 'false' else True 
+        
+        user.profile.save()
+        
+        return Response({'success': 'User is_distingushed state is: ' + request.data['is_distinguished']}, status=status.HTTP_200_OK)
