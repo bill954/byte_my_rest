@@ -82,6 +82,7 @@ class ProductListAPIView(ListAPIView):
         return products
     
 class BanProductsAdminView(APIView):
+    # Permission classes can be a tuple or list, but it must always be an iterable.
     permission_classes = [IsAdminUser]
     
     def patch(self, request, pk):

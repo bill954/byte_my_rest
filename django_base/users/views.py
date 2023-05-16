@@ -177,6 +177,8 @@ class SellersListView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
     
 class DistinguishUserAdminView(APIView):
+    permission_classes = (IsAdminUser,)
+
     
     def patch(self,request, pk):
         user = get_object_or_404(User, pk=pk)
