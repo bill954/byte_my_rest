@@ -31,6 +31,7 @@ DEBUG = env('DEBUG')
 
 ALLOWED_HOSTS = ['*']
 
+MERCADOPAGO_TOKEN = env('MERCADOPAGO_TOKEN')
 
 # Application definition
 

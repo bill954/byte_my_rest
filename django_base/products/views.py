@@ -1,3 +1,5 @@
+import mercadopago as mp
+
 from rest_framework.permissions import IsAdminUser, AllowAny
 from rest_framework.generics import ListAPIView, ListCreateAPIView, RetrieveUpdateDestroyAPIView
 from rest_framework.viewsets import ReadOnlyModelViewSet, ModelViewSet
@@ -12,9 +14,11 @@ from django.shortcuts import get_object_or_404
 from django.db.models import Q, Count, Value, CharField
 from django.db.models.functions import Concat
 
-from products.models import Product
+from products.models import Product, Order
 from products.serializers import ProductSerializer, SimpleProductSerializer
 from products.permissions import IsSellerOrReadOnly, IsSeller
+
+from django_base.settings import MERCADOPAGO_TOKEN
 
 ################################### These classes are not being used in this version. ###################################
 ############# They're not commented because I don't like how they look when commented, but they sould be.################
@@ -220,3 +224,64 @@ class ProductsViewSet(ReadOnlyModelViewSet):
             instance.is_banned = True
             instance.save()
             return Response('Product is banned', status=status.HTTP_200_OK)
+        
+    @action(detail=False, methods=['post'], url_path='buy-product')
+    def buy_product(self, request, *args, **kwargs):
+        products = request.data.get('products', None)
+        
+        items = []
+        products_ids = []
+
+        if not products:
+            return Response('No products were provided', status=status.HTTP_400_BAD_REQUEST)
+        for product in products:
+            try:
+                product_to_buy = Product.objects.get(pk=product['pk'])
+            except Product.DoesNotExist:
+                return Response('Product does not exist', status=status.HTTP_400_BAD_REQUEST)
+            
+            products_ids.append(product_to_buy.pk)
+            items.append({
+                "title": product_to_buy.name,
+                "quantity": product['quantity'],
+                "unit_price": product_to_buy.price
+            })
+            
+            new_order = Order.objects.create(buyer=request.user)
+            new_order.products.set(products_ids)
+            
+            ############# Mercadopago sdk implementation starts here ############
+            sdk = mp.SDK(MERCADOPAGO_TOKEN)
+            preference_data = {
+                "external_reference": new_order.pk,
+                "items": items
+            }
+            preference_response = sdk.preference().create(preference_data)
+            preference = preference_response["response"]
+            link = preference.get('init_point', None)
+            ########## End of Mercadopago sdk implementation (easy, huh?)########
+            
+            return Response(link, status=status.HTTP_200_OK)
+    
+    @action(detail=False, methods=['post'], url_path='mp-payment-notification', permission_classes=[AllowAny])
+    def mp_payment_notification(self, request, *args, **kwargs):
+        """
+        This is a webhook
+        """
+        sdk = mp.SDK(MERCADOPAGO_TOKEN)
+        payment_id = request.data['data'].get('id')
+        
+        if not payment_id:
+            return Response('No payment was provided', status=status.HTTP_400_BAD_REQUEST)
+        
+        payment_info = sdk.payment().get(payment_id)
+        payment_info = payment_info['response']
+        
+        if payment_info['status'] == 'approved':
+            external_reference = payment_info['external_reference']
+            order = Order.objects.get(pk=external_reference)
+            order.is_paid = True
+            order.save()
+            return Response('Payment approved', status=status.HTTP_200_OK)
+        else: 
+            return Response('Payment not approved', status=status.HTTP_400_BAD_REQUEST)
