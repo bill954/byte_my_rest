@@ -12,3 +12,8 @@ class IsSellerOrReadOnly(BasePermission):
             request.user.is_authenticated and
             request.user.user_type == 'seller'
         )
+
+class IsSeller(BasePermission):
+    def has_permission(self, view):
+        return view.request.user.is_authenticated and view.request.user.user_type == 'seller'
+    

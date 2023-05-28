@@ -22,6 +22,8 @@ class Product(models.Model):
     creation_time = models.DateTimeField(auto_now_add=True, null=True, blank=True)
     
     is_banned = models.BooleanField(default = False)
+    is_distinguished = models.BooleanField(default=False)
+    is_deleted = models.BooleanField(default=False)
     
     def __str__(self):
         return self.owner.get_full_name() + '-' + self.name

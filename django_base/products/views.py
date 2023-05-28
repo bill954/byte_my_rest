@@ -1,18 +1,23 @@
+from rest_framework.permissions import IsAdminUser, AllowAny
 from rest_framework.generics import ListAPIView, ListCreateAPIView, RetrieveUpdateDestroyAPIView
+from rest_framework.viewsets import ReadOnlyModelViewSet, ModelViewSet
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.decorators import action
 
 from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404
-from rest_framework.permissions import IsAdminUser
 
 from django.db.models import Q, Count, Value, CharField
 from django.db.models.functions import Concat
 
 from products.models import Product
 from products.serializers import ProductSerializer, SimpleProductSerializer
-from products.permissions import IsSellerOrReadOnly
+from products.permissions import IsSellerOrReadOnly, IsSeller
+
+################################### These classes are not being used in this version. ###################################
+############# They're not commented because I don't like how they look when commented, but they sould be.################
 
 class ProductListCreateAPIView(ListCreateAPIView):
 #    queryset = Product.objects.all()
@@ -97,3 +102,121 @@ class BanProductsAdminView(APIView):
         product.save()
         
         return Response({'data': 'The banned state is: ' + request.data['is_banned']}, status=status.HTTP_200_OK)
+
+########################################### End of currently unused classes. #############################################
+
+class MyProductsViewSet(ModelViewSet):
+    def get_permissions(self):
+        if self.action in ['list', 'create']:
+            return [IsSeller]
+        else:
+            return []
+        
+    def get_queryset(self):
+        products = self.request.user.products.filter().order_by('id')
+        
+        if 'search' in self.request.query_params:
+            products = products.filter(name__icontains = self.request.query_params['search'])
+        
+        if 'category' in self.request.query_params:
+            products = products.filter(category = self.request.query_params['category'])
+
+        if 'subcategory' in self.request.query_params:
+            products = products.filter(subcategory = self.request.query_params['subcategory'])
+
+        if 'color' in self.request.query_params:
+            products = products.filter(color = self.request.query_params['color'])
+
+        if 'measure_unit' in self.request.query_params:
+            products = products.filter(measure_unit = self.request.query_params['measure_unit'])
+            
+        order_by = self.request.query_params.get('order_by', 'id')
+        return products.order_by(order_by)
+    
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return SimpleProductSerializer
+        
+        else:
+            return ProductSerializer
+        
+    def create(self, request, *args, **kwargs):
+        data = request.data.copy()
+        data['owner'] = request.user.pk
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+        
+    # action decorator will turn this method into a view that executes an action in the dataset when it's accessed
+    @action(detail=True, methods=['patch'], url_path='mark-unmark-distinguished')
+    def mark_unmark_distinguished(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance.is_distinguished:
+            instance.is_distinguished = False
+            instance.save()
+            return Response('Product marked as not distinguished', status=status.HTTP_200_OK)
+        
+        if not instance.is_distinguished:        
+            if instance.owner.products.filter(is_distinguished=True, is_deleted=False).count() >= 3:
+                return Response('Already 3 products are distinguished', status=status.HTTP_400_BAD_REQUEST)
+            else:
+                instance.is_distinguished = True
+                print('--------- heree -----------')
+                print(instance)
+                print(instance.is_distinguished)
+                instance.save()
+                return Response('Product marked as distinguished', status=status.HTTP_200_OK)
+
+class ProductsViewSet(ReadOnlyModelViewSet):
+    permission_classes = [AllowAny]
+#    serializer_class = ProductSerializer
+    
+    def get_serializer_class(self):
+        if self.action == 'retrieve':
+            return ProductSerializer
+        else:
+            return SimpleProductSerializer
+    
+    def get_queryset(self):
+        if self.request.user.is_authenticated and self.request.user.is_superuser:
+            products = Product.objects.filter(owner__documentation__status='approved', is_deleted=False).order_by('id')
+        else:
+            products = Product.objects.filter(owner__documentation__status='approved', is_deleted=False, is_banned=False).order_by('id')
+            
+        if 'search' in self.request.query_params:
+            products = (products.annotate(search_field = 
+                            Concat('name', Value(' '), 
+                            'owner__first_name', Value(' '), 
+                            'owner__last_name'))
+                            .filter(search_field__icontains = self.request.query_params['search']))
+
+        if 'category' in self.request.query_params:
+            products = products.filter(category = self.request.query_params['category'])
+
+        if 'subcategory' in self.request.query_params:
+            products = products.filter(subcategory = self.request.query_params['subcategory'])
+
+        if 'color' in self.request.query_params:
+            products = products.filter(color = self.request.query_params['color'])
+
+        if 'measure_unit' in self.request.query_params:
+            products = products.filter(measure_unit = self.request.query_params['measure_unit'])
+
+        order_by = self.request.query_params.get('order_by', 'id')
+        products = products.order_by(order_by)
+
+        return products
+    
+    @action(detail=True, methods=['patch'], url_path='ban-unban-product', permission_classes=[IsAdminUser])
+    def ban_unban_product(self, request, *args, **kwargs):
+        instance = self.get_object()
+        if instance.is_banned == True:
+            instance.is_banned = False
+            instance.save()
+            return Response('Product is unbanned', status=status.HTTP_200_OK)
+        elif instance.is_banned == False:
+            instance.is_banned = True
+            instance.save()
+            return Response('Product is banned', status=status.HTTP_200_OK)
