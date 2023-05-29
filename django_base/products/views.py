@@ -259,6 +259,8 @@ class ProductsViewSet(ReadOnlyModelViewSet):
             preference_response = sdk.preference().create(preference_data)
             preference = preference_response["response"]
             link = preference.get('init_point', None)
+            new_order.mercado_link = link
+            new_order.save()
             ########## End of Mercadopago sdk implementation (easy, huh?)########
             
             return Response(link, status=status.HTTP_200_OK)
