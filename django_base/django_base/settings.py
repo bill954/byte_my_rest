@@ -54,6 +54,8 @@ THIRD_APPS = [
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
+    
+    'django_crontab',
 ]
 
 MY_APPS = [
@@ -195,3 +197,10 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 #<-------------------------- Email configurations -------------------------->
 
 AUTH_USER_MODEL = 'users.User'
+
+#<------------------------ Crontab configurations -------------------------->
+
+CRONJOBS = [
+    ('* */5 * * *', 'products.cron.order_remainder_sender'),
+    ('0 0 * * *', 'products.cron.delete_orders_unpaid_24_hours')
+]

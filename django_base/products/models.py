@@ -50,7 +50,7 @@ class Order(models.Model):
     is_paid = models.BooleanField(default=False)
     
     mercado_link = models.CharField(max_length=250, null=True, blank=True)
-    remainder_sended = models.BooleanField(default=False)
+    reminder_sended = models.BooleanField(default=False)
     
     def __str__(self):
         return self.buyer.get_full_name() + 'order' + str(self.id)
