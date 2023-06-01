@@ -16,7 +16,7 @@ from django.db.models.functions import Concat
 from products.models import Product, Order
 from products.serializers import ProductSerializer, SimpleProductSerializer
 from products.permissions import IsSellerOrReadOnly, IsSeller
-from products.tasks import sleep_message
+from products.tasks import sleep_message, load_products
 
 from django_base.settings import MERCADOPAGO_TOKEN
 
@@ -172,7 +172,12 @@ class MyProductsViewSet(ModelViewSet):
                 print(instance.is_distinguished)
                 instance.save()
                 return Response('Product marked as distinguished', status=status.HTTP_200_OK)
-
+    
+    @action(detail=False, methods=['post'], url_path='load-products-massive', permission_classes=[IsSeller])
+    def load_products_massive(self, request, *args, **kwargs):
+        load_products.delay(request.user.pk)
+        return Response('Products are being loadad', status=status.HTTP_200_OK)
+    
 class ProductsViewSet(ReadOnlyModelViewSet):
     permission_classes = [AllowAny]
 #    serializer_class = ProductSerializer

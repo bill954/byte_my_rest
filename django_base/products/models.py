@@ -9,7 +9,7 @@ class Product(models.Model):
     name = models.CharField(max_length=100)
     SKU = models.CharField(max_length=20)
     price = models.FloatField()
-    descritpion = models.TextField()
+    description = models.TextField()
     image = models.ImageField(upload_to='product/images')
     
     color = models.ForeignKey(Color, on_delete=models.SET_NULL, related_name='products', null=True, blank=True)
