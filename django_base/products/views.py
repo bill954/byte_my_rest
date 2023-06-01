@@ -8,15 +8,15 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.decorators import action
 
-from django.core.paginator import Paginator
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, HttpResponse
 
-from django.db.models import Q, Count, Value, CharField
+from django.db.models import Value, CharField
 from django.db.models.functions import Concat
 
 from products.models import Product, Order
 from products.serializers import ProductSerializer, SimpleProductSerializer
 from products.permissions import IsSellerOrReadOnly, IsSeller
+from products.tasks import sleep_message
 
 from django_base.settings import MERCADOPAGO_TOKEN
 
@@ -287,3 +287,8 @@ class ProductsViewSet(ReadOnlyModelViewSet):
             return Response('Payment approved', status=status.HTTP_200_OK)
         else: 
             return Response('Payment not approved', status=status.HTTP_400_BAD_REQUEST)
+
+# A view made to make a first test with celery        
+def celery_test_view(request):
+    sleep_message.delay()
+    return HttpResponse('task sent!!')
